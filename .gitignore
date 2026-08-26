@@ -1,0 +1,9 @@
+.env
+
+executions/*
+!executions/.gitkeep
+
+data/*
+!data/property_ids.csv.template
+
+.idea

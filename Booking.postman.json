@@ -1,0 +1,100 @@
+{
+	"info": {
+		"_postman_id": "4d54e035-2a45-4ab6-a153-72f05e66b66d",
+		"name": "Booking",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44717520"
+	},
+	"item": [
+		{
+			"name": "Constants",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer <Auth-Token>"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Affiliate-Id",
+						"value": "<Affiliate-ID>"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"languages\": [\n      \"en-gb\"\n    ]\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://demandapi.booking.com/3.1/accommodations/constants",
+					"protocol": "https",
+					"host": [
+						"demandapi",
+						"booking",
+						"com"
+					],
+					"path": [
+						"3.1",
+						"accommodations",
+						"constants"
+					]
+				},
+				"description": "Generated from cURL: curl -i -X POST \\\n  https://demandapi.booking.com/3.1/accommodations/constants \\\n  -H 'Authorization: Bearer <YOUR_string_HERE>' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-Affiliate-Id: 0' \\\n  -d '{\n    \"languages\": [\n      \"en-gb\",\n      \"zh-cn\"\n    ]\n  }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Availability",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer <Auth-Token>"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Affiliate-Id",
+						"value": "<Affiliate-ID>"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"accommodation\": 229661,\n    \"booker\": {\n      \"country\": \"es\",\n      \"platform\": \"desktop\"\n    },\n    \"checkin\": \"2026-08-29\",\n    \"checkout\": \"2026-09-03\",\n    \"extras\": [\n      \"extra_charges\"\n    ],\n    \"guests\": {\n      \"number_of_adults\": 2,\n      \"number_of_rooms\": 1\n    }\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://demandapi.booking.com/3.1/accommodations/availability",
+					"protocol": "https",
+					"host": [
+						"demandapi",
+						"booking",
+						"com"
+					],
+					"path": [
+						"3.1",
+						"accommodations",
+						"availability"
+					]
+				},
+				"description": "Generated from cURL: curl -i -X POST \\\n  https://demandapi.booking.com/3.1/accommodations/availability \\\n  -H 'Authorization: Bearer <YOUR_string_HERE>' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-Affiliate-Id: 0' \\\n  -d '{\n    \"accommodation\": 10004,\n    \"booker\": {\n      \"country\": \"nl\",\n      \"platform\": \"desktop\"\n    },\n    \"checkin\": \"!START_DATE!\",\n    \"checkout\": \"!END_DATE!\",\n    \"extras\": [\n      \"extra_charges\"\n    ],\n    \"guests\": {\n      \"number_of_adults\": 2,\n      \"number_of_rooms\": 1\n    }\n  }'"
+			},
+			"response": []
+		}
+	]
+}
