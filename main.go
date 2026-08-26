@@ -60,6 +60,10 @@ func (r row) getValue() float64 {
 		return r.Percentage
 	}
 
+	if r.Mode == "per_stay" {
+		return r.TotalAmount
+	}
+
 	return r.UnitAmount
 }
 
@@ -80,6 +84,14 @@ func (r row) getBreakout() ([]string, error) {
 	default:
 		return []string{}, fmt.Errorf("unknown mode: %s", r.Mode)
 	}
+}
+
+func (e extraCharge) isResortFee() bool {
+	return e.Charge == resortFeeID
+}
+
+func (e extraCharge) hasAmount() bool {
+	return e.TotalAmount > 0 || e.UnitAmount > 0 || e.Percentage > 0
 }
 
 type stay struct {
@@ -371,7 +383,7 @@ func fetchAvailability(client *http.Client, id int64, st stay, adults, rooms int
 func toRows(propID int64, resp *availabilityResponse, summary *summary) []row {
 	for _, p := range resp.Data.Products {
 		for _, c := range p.Price.ExtraCharges.Included {
-			if c.Charge != resortFeeID {
+			if !(c.isResortFee() && c.hasAmount()) {
 				continue
 			}
 			summary.success = append(summary.success, propID)

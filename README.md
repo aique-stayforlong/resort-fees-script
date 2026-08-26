@@ -43,3 +43,5 @@ go run main.go -max-num-ids 100
 ```
 
 Results are written as JSONL files under `executions` folder, one file per run.
+
+Once the script has run, you should map the Booking IDs to Stayforlong IDs in the resultant JSONL file before add it to the resort fees file.
