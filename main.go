@@ -38,12 +38,19 @@ var (
 	authToken      string
 	affiliateID    string
 	maxPropertyIDs int
+	from           int
 )
 
+type propertyID struct {
+	sflID     int64
+	bookingID int64
+}
+
 type summary struct {
-	success  []int64
-	notFound []int64
-	failure  []int64
+	success   []int64
+	notFound  []int64
+	zeroValue []int64
+	failure   []int64
 }
 
 type row struct {
@@ -136,25 +143,29 @@ func main() {
 	loadEnv()
 
 	maxPropertyIDsFlag := flag.Int("max-num-ids", 0, "limits the number of property IDs to process (0 = no limit)")
+	fromFlag := flag.Int("from", 0, "start processing from this property number (0 = start from the first)")
 	flag.Parse()
 	maxPropertyIDs = *maxPropertyIDsFlag
+	from = *fromFlag
 
 	ids := loadIDs()
 	if len(ids) == 0 {
 		fmt.Println("no property IDs found")
 		return
 	}
-	ids = limitIDs(ids, maxPropertyIDs)
+	ids = limitIDs(ids, from, maxPropertyIDs)
 
 	stay := buildStay()
 
 	client := &http.Client{Timeout: 60 * time.Second}
 	summary := summary{}
 
+	fmt.Println("creating execution file...")
 	execFile := createExecutionFile()
 	defer execFile.Close()
 
-	nextPropertyIDs := make(chan int64)
+	fmt.Println("fetching taxes...")
+	nextPropertyIDs := make(chan propertyID)
 	var wg sync.WaitGroup
 	var printMu sync.Mutex
 	var summaryMu sync.Mutex
@@ -167,17 +178,17 @@ func main() {
 			defer wg.Done()
 			for id := range nextPropertyIDs {
 				<-limiter.C
-				resp, err := fetchAvailability(client, id, stay, adults, rooms, currency)
+				resp, err := fetchAvailability(client, id.bookingID, stay, adults, rooms, currency)
 
 				if err != nil {
 					summaryMu.Lock()
-					summary.failure = append(summary.failure, id)
+					summary.failure = append(summary.failure, id.bookingID)
 					summaryMu.Unlock()
 					continue
 				}
 
 				summaryMu.Lock()
-				rows := toRows(id, resp, &summary)
+				rows := toRows(id.sflID, resp, &summary)
 				summaryMu.Unlock()
 				if len(rows) == 0 {
 					continue
@@ -205,7 +216,8 @@ func printSummary(summary summary) {
 	fmt.Print("\nsummary:\n--------\n")
 	fmt.Printf("- success: %d\n", len(summary.success))
 	fmt.Printf("- not found: %d\n", len(summary.notFound))
-	fmt.Printf("- failure: %s\n", joinIDs(summary.failure))
+	fmt.Printf("- zero value: %d\n", len(summary.zeroValue))
+	fmt.Printf("- failure: (%d) %s\n", len(summary.failure), joinIDs(summary.failure))
 }
 
 func joinIDs(ids []int64) string {
@@ -260,7 +272,7 @@ func loadEnv() {
 	}
 }
 
-func loadIDs() []int64 {
+func loadIDs() []propertyID {
 	_, sourceFile, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Fatal("error obtaining .csv file path")
@@ -276,7 +288,7 @@ func loadIDs() []int64 {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = -1
 
-	var ids []int64
+	var ids []propertyID
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -286,27 +298,45 @@ func loadIDs() []int64 {
 			log.Printf("error reading %s: %v\n", csvPath, err)
 			continue
 		}
-		if len(record) == 0 {
+		if len(record) < 2 {
 			continue
 		}
-		value := strings.TrimSpace(record[0])
-		if value == "" {
+		parsedSflID, ok := parseCsvID(record[0], csvPath)
+		if !ok {
 			continue
 		}
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			log.Printf("invalid id %q in %s: %v\n", value, csvPath, err)
+		parsedBookingID, ok := parseCsvID(record[1], csvPath)
+		if !ok {
 			continue
 		}
-		ids = append(ids, id)
+		ids = append(ids, propertyID{sflID: parsedSflID, bookingID: parsedBookingID})
 	}
 	return ids
 }
 
-func limitIDs(ids []int64, max int) []int64 {
-	if max != 0 && len(ids) > max {
+func parseCsvID(s, csvPath string) (int64, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		log.Printf("invalid id %q in %s: %v\n", s, csvPath, err)
+		return 0, false
+	}
+	return n, true
+}
+
+func limitIDs(ids []propertyID, from, max int) []propertyID {
+	if from > 0 {
+		if from >= len(ids) {
+			log.Fatalf("from=%d exceeds available property ids (%d)", from, len(ids))
+		}
+		ids = ids[from:]
+	}
+	if max > 0 && len(ids) > max {
 		fmt.Printf("limiting property ids from %d to %d\n", len(ids), max)
-		return ids[:max]
+		ids = ids[:max]
 	}
 	return ids
 }
@@ -384,6 +414,10 @@ func toRows(propID int64, resp *availabilityResponse, summary *summary) []row {
 	for _, p := range resp.Data.Products {
 		for _, c := range p.Price.ExtraCharges.Included {
 			if !(c.isResortFee() && c.hasAmount()) {
+				if c.isResortFee() && !c.hasAmount() {
+					summary.zeroValue = append(summary.zeroValue, propID)
+					return nil
+				}
 				continue
 			}
 			summary.success = append(summary.success, propID)

@@ -28,7 +28,7 @@ go mod tidy
    BOOKING_AFFILIATE_ID=<your affiliate ID>
    ```
 
-2. Make sure `data/property_ids.csv` contains the Booking property IDs to process (one per line). If only Stayforlong IDs are available, you will need to obtain the Booking IDs by querying the mappings table.
+2. Make sure `data/property_ids.csv` contains two IDs per row, the first one with the SFL ID and the second one with the Booking ID. If only Stayforlong IDs are available, you will need to obtain the Booking IDs by querying the `contentdb.mappings` table.
 
 ## Run
 
@@ -43,5 +43,3 @@ go run main.go -max-num-ids 100
 ```
 
 Results are written as JSONL files under `executions` folder, one file per run.
-
-Once the script has run, you should map the Booking IDs to Stayforlong IDs in the resultant JSONL file before add it to the resort fees file.
